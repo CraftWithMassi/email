@@ -59,6 +59,7 @@ app.get('/pixel.gif', (req, res) => {
             console.error('Failed to write to log file:', err);
         }
     });
+    console.log(logEntry);
 
     // --- Part B: SERVE THE PIXEL ---
 
