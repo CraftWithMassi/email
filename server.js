@@ -9,7 +9,7 @@ const geoip = require('geoip-lite')
 // 2. INITIALIZE THE EXPRESS APP
 // This creates our server application.
 const app = express();
-const PORT = 3000; // The port our server will listen on.
+const PORT = process.env.PORT || 3000; // The port our server will listen on.
 
 // 3. DEFINE THE 1x1 PIXEL IMAGE
 // This is the raw binary data for a 1x1 transparent GIF.
