@@ -11,6 +11,9 @@ const CHAT_ID = process.env.CHAT_ID;
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy for accurate IP detection
+app.set('trust proxy', true);
+
 const pixelGif = Buffer.from(
     'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
     'base64'
@@ -18,22 +21,31 @@ const pixelGif = Buffer.from(
 
 
 async function sendToTelegram(text) {
+    if (!TELEGRAM_TOKEN || !CHAT_ID) {
+        console.error("Telegram credentials are missing. Check your .env file.");
+        return;
+    }
+
     const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
 
     try {
-        await axios.post(url, {
+        const response = await axios.post(url, {
             chat_id: CHAT_ID,
             text,
             parse_mode: "HTML"
         });
+        console.log("Telegram message sent successfully");
+        return response.data;
     } catch (err) {
-        console.error("Failed to send Telegram message:", err.message);
+        console.error("Failed to send Telegram message:", err.response?.data || err.message);
+        throw err;
     }
 }
 
 
 app.get('/pixel.gif', async (req, res) => {
-    const userIp = req.ip || req.connection.remoteAddress;
+    // Get client IP (works better with trust proxy setting)
+    const userIp = req.ip || req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress || 'Unknown';
     const geo = geoip.lookup(userIp);
 
     const trackingData = {
@@ -69,9 +81,14 @@ app.get('/pixel.gif', async (req, res) => {
 📱 <b>User Agent:</b> ${trackingData.userAgent}
 `;
 
- 
-    sendToTelegram(msg);
-
+    // Send to Telegram (don't block response if it fails)
+    try {
+        await sendToTelegram(msg);
+    } catch (err) {
+        // Log error but don't fail the pixel request
+        console.error("Telegram notification failed, but pixel served:", err.message);
+    }
+   
     // Serve the pixel
     res.setHeader('Content-Type', 'image/gif');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
