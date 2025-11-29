@@ -1,1 +1,3 @@
-node_modules track.log
+node_modules 
+track.log
+.env
